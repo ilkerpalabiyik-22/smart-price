@@ -150,7 +150,8 @@
                         subUnit,
                         price,
                         unitPrice: calc.unitPrice,
-                        unitLabel: calc.label
+                        unitLabel: calc.label,
+                        isEditing: false
                     }
                 ]
             };
@@ -198,9 +199,49 @@
                         </button>
                     </div>
 
+                    <!-- Kart İçi Seçenekler Listesi -->
                     <div class="space-y-2">
                         ${card.items.map((item, index) => {
                             const isBest = index === 0;
+
+                            // Eğer seçenek Düzenleme modundaysa
+                            if (item.isEditing) {
+                                return `
+                                    <div class="p-3 bg-amber-50/60 border border-amber-300 rounded-xl space-y-2">
+                                        <div class="text-[10px] font-bold text-amber-700 uppercase">Seçeneği Düzenle</div>
+                                        <div class="grid grid-cols-12 gap-1.5 items-center">
+                                            <div class="col-span-3">
+                                                <label class="block text-[9px] text-slate-400">Adet</label>
+                                                <input type="number" inputmode="numeric" id="edit-pkg-${item.id}" value="${item.pkgCount}" class="w-full bg-white border border-amber-300 rounded px-1 py-1 text-xs text-center">
+                                            </div>
+                                            <div class="col-span-4">
+                                                <label class="block text-[9px] text-slate-400">Fiyat TL</label>
+                                                <input type="number" step="any" inputmode="decimal" id="edit-price-${item.id}" value="${item.price}" class="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-xs">
+                                            </div>
+                                            <div class="col-span-5">
+                                                <label class="block text-[9px] text-slate-400">Miktar</label>
+                                                <div class="flex gap-1">
+                                                    <input type="number" step="any" inputmode="decimal" id="edit-amount-${item.id}" value="${item.amount}" class="w-full bg-white border border-amber-300 rounded px-1.5 py-1 text-xs">
+                                                    ${card.unitType !== 'adet' ? `
+                                                        <select id="edit-sub-${item.id}" class="bg-amber-100 border border-amber-300 rounded text-[10px] px-0.5">
+                                                            <option value="ml" ${item.subUnit === 'ml' ? 'selected' : ''}>mL</option>
+                                                            <option value="lt" ${item.subUnit === 'lt' ? 'selected' : ''}>L</option>
+                                                            <option value="g" ${item.subUnit === 'g' ? 'selected' : ''}>g</option>
+                                                            <option value="kg" ${item.subUnit === 'kg' ? 'selected' : ''}>kg</option>
+                                                        </select>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2 pt-1">
+                                            <button onclick="saveItemEdit('${card.id}', '${item.id}')" class="flex-1 bg-emerald-600 text-white font-semibold text-xs py-1 rounded shadow">Kaydet</button>
+                                            <button onclick="toggleItemEdit('${card.id}', '${item.id}', false)" class="bg-slate-200 text-slate-600 font-semibold text-xs px-3 py-1 rounded">İptal</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            // Normal Görünüm
                             return `
                                 <div class="flex justify-between items-center p-2.5 rounded-xl border ${isBest ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
                                     <div class="space-y-0.5">
@@ -210,12 +251,15 @@
                                         </div>
                                         <div class="text-[11px] text-slate-500">Toplam: ₺${item.price.toFixed(2)}</div>
                                     </div>
-                                    <div class="flex items-center gap-3">
-                                        <div class="text-right">
+                                    <div class="flex items-center gap-2">
+                                        <div class="text-right mr-1">
                                             <div class="text-sm font-bold text-indigo-600">₺${item.unitPrice.toFixed(2)}</div>
                                             <div class="text-[9px] text-slate-400 font-medium">${item.unitLabel}</div>
                                         </div>
-                                        <button onclick="deleteItem('${card.id}', '${item.id}')" class="text-slate-300 hover:text-rose-500 text-sm font-bold px-1">
+                                        <button onclick="toggleItemEdit('${card.id}', '${item.id}', true)" title="Düzenle" class="text-slate-400 hover:text-indigo-600 p-1 text-xs">
+                                            ✏️
+                                        </button>
+                                        <button onclick="deleteItem('${card.id}', '${item.id}')" title="Sil" class="text-slate-300 hover:text-rose-500 p-1 text-xs font-bold">
                                             ✕
                                         </button>
                                     </div>
@@ -224,7 +268,7 @@
                         }).join('')}
                     </div>
 
-                    <!-- Tam Uyumlu 2 Satırlı Seçenek Ekleme Alanı -->
+                    <!-- Yeni Seçenek Ekleme Alanı -->
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mt-2 space-y-2">
                         <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">+ Yeni Seçenek Ekle</div>
                         
@@ -257,20 +301,55 @@
                 `;
 
                 cardsContainer.appendChild(cardEl);
-
-                setTimeout(() => {
-                    const priceInp = document.getElementById(`price-${card.id}`);
-                    const amountInp = document.getElementById(`amount-${card.id}`);
-                    if (priceInp && amountInp) {
-                        priceInp.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                amountInp.focus();
-                            }
-                        });
-                    }
-                }, 50);
             });
+        }
+
+        // Düzenleme Modunu Aç / Kapat
+        function toggleItemEdit(cardId, itemId, state) {
+            const card = cards.find(c => c.id === cardId);
+            if (card) {
+                const item = card.items.find(i => i.id === itemId);
+                if (item) {
+                    item.isEditing = state;
+                    renderCards();
+                }
+            }
+        }
+
+        // Düzenlenen Değerleri Kaydet
+        function saveItemEdit(cardId, itemId) {
+            const card = cards.find(c => c.id === cardId);
+            if (!card) return;
+
+            const item = card.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const pkgInp = document.getElementById(`edit-pkg-${itemId}`);
+            const priceInp = document.getElementById(`edit-price-${itemId}`);
+            const amountInp = document.getElementById(`edit-amount-${itemId}`);
+            const subInp = document.getElementById(`edit-sub-${itemId}`);
+
+            const pkgCount = parseInt(pkgInp.value) || 1;
+            const price = parseFloat(priceInp.value);
+            const amount = parseFloat(amountInp.value) || 1;
+            const subUnit = subInp ? subInp.value : card.unitType;
+
+            if (isNaN(price) || isNaN(amount)) {
+                alert('Lütfen geçerli bir fiyat ve miktar girin.');
+                return;
+            }
+
+            const calc = calculateUnitPrice(price, pkgCount, amount, card.unitType, subUnit);
+
+            item.pkgCount = pkgCount;
+            item.price = price;
+            item.amount = amount;
+            item.subUnit = subUnit;
+            item.unitPrice = calc.unitPrice;
+            item.unitLabel = calc.label;
+            item.isEditing = false;
+
+            renderCards();
         }
 
         function addOptionToCard(cardId) {
@@ -301,7 +380,8 @@
                 subUnit,
                 price,
                 unitPrice: calc.unitPrice,
-                unitLabel: calc.label
+                unitLabel: calc.label,
+                isEditing: false
             });
 
             renderCards();
