@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <!-- iPhone zoom engelleme -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartPrice</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* iOS Safari yakınlaşma engeli */
+        input, select, button {
+            font-size: 16px !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen p-3 sm:p-6 flex flex-col items-center">
+
+    <div class="w-full max-w-lg space-y-4">
+        
+        <!-- Üst Başlık -->
+        <header class="text-center py-2">
+            <h1 class="text-2xl font-extrabold text-indigo-600 tracking-tight">🛒 SmartPrice</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Aydınlık & Kartlı Birim Fiyat Karşılaştırıcı</p>
+        </header>
+
+        <!-- Yeni Kart / Ürün Oluşturma Formu -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">+ Yeni Ürün Kartı Aç</h2>
+            
+            <form id="newCardForm" class="space-y-3">
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="col-span-2">
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Ürün / Kart Adı</label>
+                        <input type="text" id="mainProductName" placeholder="Örn: Su, Süt, Sıvı Yağ" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Ölçü Tipi</label>
+                        <select id="mainUnitType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ml">Litre / mL</option>
+                            <option value="g">Kg / Gram</option>
+                            <option value="adet">Adet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- İlk Seçenek Detayları -->
+                <div class="grid grid-cols-12 gap-2 pt-1">
+                    <div class="col-span-3">
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1">Paket Adet</label>
+                        <input type="number" inputmode="numeric" id="initPkg" value="1" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-center text-slate-800">
+                    </div>
+                    <div class="col-span-5">
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1">Fiyat (TL)</label>
+                        <input type="number" step="any" inputmode="decimal" id="initPrice" placeholder="0.00" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-slate-800">
+                    </div>
+                    <div class="col-span-4">
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1" id="initAmountLabel">Miktar (mL)</label>
+                        <div class="flex gap-1">
+                            <input type="number" step="any" inputmode="decimal" id="initAmount" placeholder="330" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-slate-800">
+                            <select id="initSubUnit" class="bg-slate-100 border border-slate-300 rounded-lg px-1 text-xs">
+                                <option value="ml">mL</option>
+                                <option value="lt">L</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl shadow transition active:scale-98 mt-1">
+                    Kartı Oluştur ve İlk Seçeneği Ekle
+                </button>
+            </form>
+        </div>
+
+        <!-- Ürün Kartları Listesi -->
+        <div id="cardsContainer" class="space-y-4">
+            <!-- Kartlar JS ile buraya eklenecektir -->
+        </div>
+
+    </div>
+
+    <script>
+        let cards = [];
+
+        // DOM Elemanları
+        const newCardForm = document.getElementById('newCardForm');
+        const mainUnitType = document.getElementById('mainUnitType');
+        const initSubUnit = document.getElementById('initSubUnit');
+        const initAmountLabel = document.getElementById('initAmountLabel');
+        const initPrice = document.getElementById('initPrice');
+        const initAmount = document.getElementById('initAmount');
+        const cardsContainer = document.getElementById('cardsContainer');
+
+        // Ölçü tipine göre alt birimleri değiştirme
+        mainUnitType.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'ml') {
+                initSubUnit.style.display = 'block';
+                initSubUnit.innerHTML = '<option value="ml">mL</option><option value="lt">L</option>';
+                initAmountLabel.textContent = 'Miktar';
+            } else if (val === 'g') {
+                initSubUnit.style.display = 'block';
+                initSubUnit.innerHTML = '<option value="g">g</option><option value="kg">kg</option>';
+                initAmountLabel.textContent = 'Miktar';
+            } else {
+                initSubUnit.style.display = 'none';
+                initAmountLabel.textContent = 'Miktar (1)';
+                initAmount.value = 1;
+            }
+        });
+
+        // Fiyattan Miktara Akıllı Geçiş (Klavye Kapanmadan)
+        initPrice.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                initAmount.focus();
+            }
+        });
+
+        // Hesaplama Fonksiyonu
+        function calculateUnitPrice(totalPrice, packageCount, amount, unitType, subUnit) {
+            let totalStandard = 0;
+            let label = '';
+
+            if (unitType === 'ml') {
+                totalStandard = (subUnit === 'ml') ? (amount * packageCount) / 1000 : amount * packageCount;
+                label = 'TL / L';
+            } else if (unitType === 'g') {
+                totalStandard = (subUnit === 'g') ? (amount * packageCount) / 1000 : amount * packageCount;
+                label = 'TL / kg';
+            } else {
+                totalStandard = packageCount * amount;
+                label = 'TL / Adet';
+            }
+
+            const unitPrice = totalPrice / totalStandard;
+            return { unitPrice, label };
+        }
+
+        // Yeni Kart Oluşturma
+        newCardForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('mainProductName').value.trim();
+            const unitType = mainUnitType.value;
+            const pkgCount = parseInt(document.getElementById('initPkg').value) || 1;
+            const price = parseFloat(initPrice.value);
+            const amount = parseFloat(initAmount.value) || 1;
+            const subUnit = initSubUnit.value;
+
+            const calc = calculateUnitPrice(price, pkgCount, amount, unitType, subUnit);
+
+            const newCard = {
+                id: Date.now().toString(),
+                name,
+                unitType,
+                items: [
+                    {
+                        id: Date.now().toString() + '-item',
+                        pkgCount,
+                        amount,
+                        subUnit,
+                        price,
+                        unitPrice: calc.unitPrice,
+                        unitLabel: calc.label
+                    }
+                ]
+            };
+
+            cards.unshift(newCard);
+            renderCards();
+
+            newCardForm.reset();
+            document.getElementById('initPkg').value = 1;
+        });
+
+        // Kartları Ekrana Yazdırma
+        function renderCards() {
+            cardsContainer.innerHTML = '';
+
+            if (cards.length === 0) {
+                cardsContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        Henüz oluşturulmuş ürün kartı yok. Yukarıdan ilk kartınızı ekleyebilirsiniz.
+                    </div>
+                `;
+                return;
+            }
+
+            cards.forEach(card => {
+                // Fiyata göre sıralama (En ucuz en üstte)
+                card.items.sort((a, b) => a.unitPrice - b.unitPrice);
+
+                const cardEl = document.createElement('div');
+                cardEl.className = "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3";
+
+                // Subunit seçenekleri
+                let subUnitOptionsHtml = '';
+                if (card.unitType === 'ml') {
+                    subUnitOptionsHtml = '<option value="ml">mL</option><option value="lt">L</option>';
+                } else if (card.unitType === 'g') {
+                    subUnitOptionsHtml = '<option value="g">g</option><option value="kg">kg</option>';
+                }
+
+                cardEl.innerHTML = `
+                    <!-- Kart Başlığı -->
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div>
+                            <h3 class="font-bold text-base text-slate-800">${card.name}</h3>
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">${card.unitType === 'ml' ? 'Sıvı (Litre/mL)' : card.unitType === 'g' ? 'Ağırlık (Kg/g)' : 'Adetli Ürün'}</span>
+                        </div>
+                        <button onclick="deleteCard('${card.id}')" class="text-xs text-rose-500 hover:text-rose-700 font-medium bg-rose-50 px-2 py-1 rounded-lg">
+                            Kartı Sil
+                        </button>
+                    </div>
+
+                    <!-- Kart İçi Seçenekler Listesi -->
+                    <div class="space-y-2">
+                        ${card.items.map((item, index) => {
+                            const isBest = index === 0;
+                            return `
+                                <div class="flex justify-between items-center p-2.5 rounded-xl border ${isBest ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
+                                    <div class="space-y-0.5">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-slate-700">${item.pkgCount > 1 ? item.pkgCount + 'x ' : ''}${item.amount} ${card.unitType !== 'adet' ? item.subUnit : 'Adet'}</span>
+                                            ${isBest ? '<span class="bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">EN UCUZ</span>' : ''}
+                                        </div>
+                                        <div class="text-[11px] text-slate-500">Toplam: ₺${item.price.toFixed(2)}</div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-right">
+                                            <div class="text-sm font-bold text-indigo-600">₺${item.unitPrice.toFixed(2)}</div>
+                                            <div class="text-[9px] text-slate-400 font-medium">${item.unitLabel}</div>
+                                        </div>
+                                        <button onclick="deleteItem('${card.id}', '${item.id}')" class="text-slate-300 hover:text-rose-500 text-sm font-bold px-1">
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- Kart İçi Hızlı 2. / 3. Seçenek Ekleme Formu -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 mt-2">
+                        <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1.5">+ Yeni Seçenek Ekle</div>
+                        <div class="grid grid-cols-12 gap-1.5 items-center">
+                            <div class="col-span-3">
+                                <input type="number" inputmode="numeric" id="pkg-${card.id}" value="1" min="1" placeholder="Adet" class="w-full bg-white border border-slate-300 rounded-lg px-1.5 py-1.5 text-xs text-center">
+                            </div>
+                            <div class="col-span-4">
+                                <input type="number" step="any" inputmode="decimal" id="price-${card.id}" placeholder="Fiyat TL" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                            </div>
+                            <div class="col-span-3 flex gap-0.5">
+                                <input type="number" step="any" inputmode="decimal" id="amount-${card.id}" placeholder="Miktar" class="w-full bg-white border border-slate-300 rounded-lg px-1.5 py-1.5 text-xs">
+                                ${card.unitType !== 'adet' ? `
+                                    <select id="sub-${card.id}" class="bg-slate-200 border border-slate-300 rounded-lg text-[10px] px-0.5">
+                                        ${subUnitOptionsHtml}
+                                    </select>
+                                ` : ''}
+                            </div>
+                            <div class="col-span-2">
+                                <button onclick="addOptionToCard('${card.id}')" class="w-full bg-indigo-600 text-white font-bold text-xs py-1.5 rounded-lg shadow active:scale-95">
+                                    Ekle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                cardsContainer.appendChild(cardEl);
+
+                // Kart içi klavye geçişini bağla
+                setTimeout(() => {
+                    const priceInp = document.getElementById(`price-${card.id}`);
+                    const amountInp = document.getElementById(`amount-${card.id}`);
+                    if (priceInp && amountInp) {
+                        priceInp.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                amountInp.focus();
+                            }
+                        });
+                    }
+                }, 50);
+            });
+        }
+
+        // Karta Yeni Seçenek Ekleme (İsim sormadan)
+        function addOptionToCard(cardId) {
+            const card = cards.find(c => c.id === cardId);
+            if (!card) return;
+
+            const pkgInp = document.getElementById(`pkg-${cardId}`);
+            const priceInp = document.getElementById(`price-${cardId}`);
+            const amountInp = document.getElementById(`amount-${cardId}`);
+            const subInp = document.getElementById(`sub-${cardId}`);
+
+            const pkgCount = parseInt(pkgInp.value) || 1;
+            const price = parseFloat(priceInp.value);
+            const amount = parseFloat(amountInp.value) || 1;
+            const subUnit = subInp ? subInp.value : card.unitType;
+
+            if (isNaN(price) || isNaN(amount)) {
+                alert('Lütfen geçerli bir fiyat ve miktar girin.');
+                return;
+            }
+
+            const calc = calculateUnitPrice(price, pkgCount, amount, card.unitType, subUnit);
+
+            card.items.push({
+                id: Date.now().toString() + '-item',
+                pkgCount,
+                amount,
+                subUnit,
+                price,
+                unitPrice: calc.unitPrice,
+                unitLabel: calc.label
+            });
+
+            renderCards();
+        }
+
+        // Seçenek Silme
+        function deleteItem(cardId, itemId) {
+            const card = cards.find(c => c.id === cardId);
+            if (card) {
+                card.items = card.items.filter(i => i.id !== itemId);
+                if (card.items.length === 0) {
+                    deleteCard(cardId);
+                } else {
+                    renderCards();
+                }
+            }
+        }
+
+        // Kartı Komple Silme
+        function deleteCard(cardId) {
+            cards = cards.filter(c => c.id !== cardId);
+            renderCards();
+        }
+    </script>
+</body>
+</html>
