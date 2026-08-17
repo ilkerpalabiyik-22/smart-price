@@ -2,13 +2,10 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <!-- iPhone zoom engelleme -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SmartPrice</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* iOS Safari yakınlaşma engeli */
         input, select, button {
             font-size: 16px !important;
         }
@@ -18,13 +15,12 @@
 
     <div class="w-full max-w-lg space-y-4">
         
-        <!-- Üst Başlık -->
         <header class="text-center py-2">
             <h1 class="text-2xl font-extrabold text-indigo-600 tracking-tight">🛒 SmartPrice</h1>
             <p class="text-xs text-slate-500 mt-0.5">Aydınlık & Kartlı Birim Fiyat Karşılaştırıcı</p>
         </header>
 
-        <!-- Yeni Kart / Ürün Oluşturma Formu -->
+        <!-- Yeni Kart Formu -->
         <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">+ Yeni Ürün Kartı Aç</h2>
             
@@ -44,18 +40,17 @@
                     </div>
                 </div>
 
-                <!-- İlk Seçenek Detayları -->
                 <div class="grid grid-cols-12 gap-2 pt-1">
                     <div class="col-span-3">
                         <label class="block text-[10px] font-medium text-slate-500 mb-1">Paket Adet</label>
                         <input type="number" inputmode="numeric" id="initPkg" value="1" min="1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-center text-slate-800">
                     </div>
-                    <div class="col-span-5">
+                    <div class="col-span-4">
                         <label class="block text-[10px] font-medium text-slate-500 mb-1">Fiyat (TL)</label>
                         <input type="number" step="any" inputmode="decimal" id="initPrice" placeholder="0.00" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-slate-800">
                     </div>
-                    <div class="col-span-4">
-                        <label class="block text-[10px] font-medium text-slate-500 mb-1" id="initAmountLabel">Miktar (mL)</label>
+                    <div class="col-span-5">
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1" id="initAmountLabel">Miktar</label>
                         <div class="flex gap-1">
                             <input type="number" step="any" inputmode="decimal" id="initAmount" placeholder="330" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 text-slate-800">
                             <select id="initSubUnit" class="bg-slate-100 border border-slate-300 rounded-lg px-1 text-xs">
@@ -72,17 +67,14 @@
             </form>
         </div>
 
-        <!-- Ürün Kartları Listesi -->
-        <div id="cardsContainer" class="space-y-4">
-            <!-- Kartlar JS ile buraya eklenecektir -->
-        </div>
+        <!-- Kartlar Listesi -->
+        <div id="cardsContainer" class="space-y-4"></div>
 
     </div>
 
     <script>
         let cards = [];
 
-        // DOM Elemanları
         const newCardForm = document.getElementById('newCardForm');
         const mainUnitType = document.getElementById('mainUnitType');
         const initSubUnit = document.getElementById('initSubUnit');
@@ -91,7 +83,6 @@
         const initAmount = document.getElementById('initAmount');
         const cardsContainer = document.getElementById('cardsContainer');
 
-        // Ölçü tipine göre alt birimleri değiştirme
         mainUnitType.addEventListener('change', (e) => {
             const val = e.target.value;
             if (val === 'ml') {
@@ -109,7 +100,6 @@
             }
         });
 
-        // Fiyattan Miktara Akıllı Geçiş (Klavye Kapanmadan)
         initPrice.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -117,7 +107,6 @@
             }
         });
 
-        // Hesaplama Fonksiyonu
         function calculateUnitPrice(totalPrice, packageCount, amount, unitType, subUnit) {
             let totalStandard = 0;
             let label = '';
@@ -137,7 +126,6 @@
             return { unitPrice, label };
         }
 
-        // Yeni Kart Oluşturma
         newCardForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -174,7 +162,6 @@
             document.getElementById('initPkg').value = 1;
         });
 
-        // Kartları Ekrana Yazdırma
         function renderCards() {
             cardsContainer.innerHTML = '';
 
@@ -188,13 +175,11 @@
             }
 
             cards.forEach(card => {
-                // Fiyata göre sıralama (En ucuz en üstte)
                 card.items.sort((a, b) => a.unitPrice - b.unitPrice);
 
                 const cardEl = document.createElement('div');
                 cardEl.className = "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3";
 
-                // Subunit seçenekleri
                 let subUnitOptionsHtml = '';
                 if (card.unitType === 'ml') {
                     subUnitOptionsHtml = '<option value="ml">mL</option><option value="lt">L</option>';
@@ -203,7 +188,6 @@
                 }
 
                 cardEl.innerHTML = `
-                    <!-- Kart Başlığı -->
                     <div class="flex justify-between items-center border-b border-slate-100 pb-2">
                         <div>
                             <h3 class="font-bold text-base text-slate-800">${card.name}</h3>
@@ -214,7 +198,6 @@
                         </button>
                     </div>
 
-                    <!-- Kart İçi Seçenekler Listesi -->
                     <div class="space-y-2">
                         ${card.items.map((item, index) => {
                             const isBest = index === 0;
@@ -241,36 +224,40 @@
                         }).join('')}
                     </div>
 
-                    <!-- Kart İçi Hızlı 2. / 3. Seçenek Ekleme Formu -->
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 mt-2">
-                        <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1.5">+ Yeni Seçenek Ekle</div>
-                        <div class="grid grid-cols-12 gap-1.5 items-center">
+                    <!-- Düzenlenen Hızlı Seçenek Ekleme Alanı -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mt-2 space-y-2">
+                        <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">+ Yeni Seçenek Ekle</div>
+                        
+                        <div class="grid grid-cols-12 gap-2 items-center">
                             <div class="col-span-3">
-                                <input type="number" inputmode="numeric" id="pkg-${card.id}" value="1" min="1" placeholder="Adet" class="w-full bg-white border border-slate-300 rounded-lg px-1.5 py-1.5 text-xs text-center">
+                                <label class="block text-[9px] font-medium text-slate-400 mb-0.5">Adet</label>
+                                <input type="number" inputmode="numeric" id="pkg-${card.id}" value="1" min="1" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-2 text-xs text-center">
                             </div>
                             <div class="col-span-4">
-                                <input type="number" step="any" inputmode="decimal" id="price-${card.id}" placeholder="Fiyat TL" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs">
+                                <label class="block text-[9px] font-medium text-slate-400 mb-0.5">Fiyat (TL)</label>
+                                <input type="number" step="any" inputmode="decimal" id="price-${card.id}" placeholder="0.00" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-2 text-xs">
                             </div>
-                            <div class="col-span-3 flex gap-0.5">
-                                <input type="number" step="any" inputmode="decimal" id="amount-${card.id}" placeholder="Miktar" class="w-full bg-white border border-slate-300 rounded-lg px-1.5 py-1.5 text-xs">
-                                ${card.unitType !== 'adet' ? `
-                                    <select id="sub-${card.id}" class="bg-slate-200 border border-slate-300 rounded-lg text-[10px] px-0.5">
-                                        ${subUnitOptionsHtml}
-                                    </select>
-                                ` : ''}
-                            </div>
-                            <div class="col-span-2">
-                                <button onclick="addOptionToCard('${card.id}')" class="w-full bg-indigo-600 text-white font-bold text-xs py-1.5 rounded-lg shadow active:scale-95">
-                                    Ekle
-                                </button>
+                            <div class="col-span-5">
+                                <label class="block text-[9px] font-medium text-slate-400 mb-0.5">Miktar</label>
+                                <div class="flex gap-1">
+                                    <input type="number" step="any" inputmode="decimal" id="amount-${card.id}" placeholder="330" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-2 text-xs">
+                                    ${card.unitType !== 'adet' ? `
+                                        <select id="sub-${card.id}" class="bg-slate-200 border border-slate-300 rounded-lg text-[10px] px-1">
+                                            ${subUnitOptionsHtml}
+                                        </select>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
+
+                        <button onclick="addOptionToCard('${card.id}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-lg shadow active:scale-95 transition">
+                            + Seçenek Ekle
+                        </button>
                     </div>
                 `;
 
                 cardsContainer.appendChild(cardEl);
 
-                // Kart içi klavye geçişini bağla
                 setTimeout(() => {
                     const priceInp = document.getElementById(`price-${card.id}`);
                     const amountInp = document.getElementById(`amount-${card.id}`);
@@ -286,7 +273,6 @@
             });
         }
 
-        // Karta Yeni Seçenek Ekleme (İsim sormadan)
         function addOptionToCard(cardId) {
             const card = cards.find(c => c.id === cardId);
             if (!card) return;
@@ -321,7 +307,6 @@
             renderCards();
         }
 
-        // Seçenek Silme
         function deleteItem(cardId, itemId) {
             const card = cards.find(c => c.id === cardId);
             if (card) {
@@ -334,7 +319,6 @@
             }
         }
 
-        // Kartı Komple Silme
         function deleteCard(cardId) {
             cards = cards.filter(c => c.id !== cardId);
             renderCards();
